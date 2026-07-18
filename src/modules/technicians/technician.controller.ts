@@ -53,6 +53,11 @@ const getTechnicianBookings = asyncHandler(async (req: Request, res: Response) =
   );
 });
 
+const updateBookingStatus = asyncHandler(async (req: Request, res: Response) => {
+  const booking = await technicianService.updateBookingStatus(req.user!.userId, String(req.params.bookingId), req.body.status);
+  res.status(200).json(ApiResponse.success(booking, "Booking status updated successfully"));
+});
+
 export const technicianController = {
   getAll,
   getById,
@@ -61,4 +66,5 @@ export const technicianController = {
   setAvailability,
   getAvailability,
   getTechnicianBookings,
+  updateBookingStatus,
 };

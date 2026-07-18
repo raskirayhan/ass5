@@ -161,6 +161,37 @@ const getTechnicianBookings = async (userId: string, pagination: PaginationParam
   return { bookings, total };
 };
 
+const updateBookingStatus = async (userId: string, bookingId: string, newStatus: string) => {
+  const profile = await prisma.technicianProfile.findUnique({ where: { userId } });
+  if (!profile) throw ApiError.notFound("Technician profile not found");
+
+  const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+  if (!booking) throw ApiError.notFound("Booking not found");
+  if (booking.technicianId !== profile.id) throw ApiError.forbidden("Not your booking");
+
+  const { canTransitionStatus } = await import("../../helpers");
+  if (!canTransitionStatus(booking.status, newStatus as any)) {
+    throw ApiError.badRequest(`Cannot transition from ${booking.status} to ${newStatus}`);
+  }
+
+  const data: any = { status: newStatus };
+  if (newStatus === "COMPLETED") {
+    await prisma.technicianProfile.update({
+      where: { id: profile.id },
+      data: { completedJobs: { increment: 1 } },
+    });
+  }
+
+  return prisma.booking.update({
+    where: { id: bookingId },
+    data,
+    include: {
+      service: true,
+      customer: { select: { id: true, name: true, email: true } },
+    },
+  });
+};
+
 export const technicianService = {
   getAll,
   getById,
@@ -169,4 +200,5 @@ export const technicianService = {
   setAvailability,
   getAvailability,
   getTechnicianBookings,
+  updateBookingStatus,
 };

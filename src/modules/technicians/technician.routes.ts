@@ -9,6 +9,7 @@ const router = Router();
 
 router.get("/", technicianController.getAll);
 router.get("/bookings", authenticate, authorize("TECHNICIAN"), technicianController.getTechnicianBookings);
+router.patch("/bookings/:bookingId", authenticate, authorize("TECHNICIAN"), technicianController.updateBookingStatus);
 router.get("/availability/me", authenticate, authorize("TECHNICIAN"), technicianController.getAvailability);
 router.put("/profile", authenticate, authorize("TECHNICIAN"), validate(updateProfileSchema), technicianController.updateProfile);
 router.put("/availability", authenticate, authorize("TECHNICIAN"), validate(setAvailabilitySchema), technicianController.setAvailability);

@@ -26,22 +26,34 @@ const createPayment = async (userId: string, dto: CreatePaymentInput) => {
   }
 
   if (dto.provider === "STRIPE") {
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(booking.service.price * 100),
-      currency: "usd",
-      metadata: {
-        bookingId: booking.id,
-        userId,
-        serviceTitle: booking.service.title,
-      },
-    });
+    let paymentIntentId = `sim_pi_${Date.now()}`;
+    let clientSecret = `sim_secret_${Date.now()}`;
+
+    if (!dto.simulate) {
+      let paymentIntent: any;
+      try {
+        paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(booking.service.price * 100),
+          currency: "usd",
+          metadata: {
+            bookingId: booking.id,
+            userId,
+            serviceTitle: booking.service.title,
+          },
+        });
+        paymentIntentId = paymentIntent.id;
+        clientSecret = paymentIntent.client_secret!;
+      } catch (stripeError: any) {
+        throw ApiError.badRequest(`Stripe error: ${stripeError.message}`);
+      }
+    }
 
     let payment;
     if (booking.payment) {
       payment = await prisma.payment.update({
         where: { id: booking.payment.id },
         data: {
-          stripePaymentIntentId: paymentIntent.id,
+          stripePaymentIntentId: paymentIntentId,
           amount: booking.service.price,
         },
       });
@@ -52,7 +64,7 @@ const createPayment = async (userId: string, dto: CreatePaymentInput) => {
           userId,
           amount: booking.service.price,
           provider: "STRIPE",
-          stripePaymentIntentId: paymentIntent.id,
+          stripePaymentIntentId: paymentIntentId,
           status: "PENDING",
         },
       });
@@ -60,7 +72,7 @@ const createPayment = async (userId: string, dto: CreatePaymentInput) => {
 
     return {
       paymentId: payment.id,
-      clientSecret: paymentIntent.client_secret,
+      clientSecret,
       amount: booking.service.price,
       currency: "usd",
     };
@@ -95,14 +107,41 @@ const createPayment = async (userId: string, dto: CreatePaymentInput) => {
   }
 };
 
-const confirmPayment = async (bookingId: string, sessionId: string) => {
+const confirmPayment = async (
+  bookingId: string,
+  sessionId: string,
+  simulate?: boolean,
+) => {
   const payment = await prisma.payment.findFirst({
     where: { bookingId },
   });
   if (!payment) throw ApiError.notFound("Payment record not found");
 
   if (payment.provider === "STRIPE") {
-    const paymentIntent = await stripe.paymentIntents.retrieve(sessionId);
+    if (simulate) {
+      const updatedPayment = await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: "COMPLETED",
+          paidAt: new Date(),
+          stripePaymentIntentId: sessionId,
+        },
+      });
+
+      await prisma.booking.update({
+        where: { id: bookingId },
+        data: { status: "PAID" },
+      });
+
+      return updatedPayment;
+    }
+
+    let paymentIntent: Stripe.PaymentIntent;
+    try {
+      paymentIntent = await stripe.paymentIntents.retrieve(sessionId);
+    } catch (err: any) {
+      throw ApiError.badRequest(`Stripe error: ${err.message}`);
+    }
 
     if (paymentIntent.status === "succeeded") {
       const updatedPayment = await prisma.payment.update({

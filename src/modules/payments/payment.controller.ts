@@ -10,8 +10,8 @@ const createPayment = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const confirmPayment = asyncHandler(async (req: Request, res: Response) => {
-  const { bookingId, sessionId } = req.body;
-  const result = await paymentService.confirmPayment(bookingId, sessionId);
+  const { bookingId, sessionId, simulate } = req.body;
+  const result = await paymentService.confirmPayment(bookingId, sessionId, simulate);
   res.status(200).json(ApiResponse.success(result, "Payment confirmed successfully"));
 });
 
