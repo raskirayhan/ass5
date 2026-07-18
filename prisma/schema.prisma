@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id             String            @id @default(uuid())
+  name           String
+  email          String            @unique
+  password       String
+  phone          String?
+  address        String?
+  role           Role              @default(CUSTOMER)
+  status         UserStatus        @default(ACTIVE)
+  profileImage   String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  technicianProfile   TechnicianProfile?
+  bookingsAsCustomer  Booking[]          @relation("CustomerBookings")
+  reviewsGiven        Review[]           @relation("ReviewAuthor")
+  payments            Payment[]
+}
+
+model TechnicianProfile {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  bio          String?
+  experience   Int      @default(0)
+  hourlyRate   Float?
+  skills       String[]
+  location     String?
+  serviceArea  String?
+  isVerified   Boolean  @default(false)
+  avgRating    Float    @default(0)
+  completedJobs Int     @default(0)
+  profileImage String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  services      Service[]
+  availabilities Availability[]
+  bookings      Booking[]
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  icon        String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  services Service[]
+}
+
+model Service {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  price       Float
+  duration    Int
+  location    String?
+  categoryId  String
+  techId      String
+  isAvailable Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category   Category          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  technician TechnicianProfile @relation(fields: [techId], references: [id], onDelete: Cascade)
+  bookings   Booking[]
+}
+
+model Availability {
+  id          String   @id @default(uuid())
+  techId      String
+  dayOfWeek   Int
+  startTime   String
+  endTime     String
+  isAvailable Boolean  @default(true)
+
+  technician TechnicianProfile @relation(fields: [techId], references: [id], onDelete: Cascade)
+
+  @@unique([techId, dayOfWeek, startTime])
+}
+
+model Booking {
+  id           String        @id @default(uuid())
+  customerId   String
+  technicianId String
+  serviceId    String
+  date         DateTime
+  time         String
+  address      String
+  note         String?
+  status       BookingStatus @default(REQUESTED)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  customer   User              @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Cascade)
+  technician TechnicianProfile @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+  service    Service           @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  payment    Payment?
+  review     Review?
+}
+
+model Payment {
+  id              String          @id @default(uuid())
+  bookingId       String          @unique
+  userId          String
+  transactionId   String?
+  amount          Float
+  currency        String          @default("USD")
+  provider        PaymentProvider
+  stripeSessionId String?
+  stripePaymentIntentId String?
+  status          PaymentStatus   @default(PENDING)
+  paidAt          DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  authorId  String
+  bookingId String   @unique
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author  User    @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  CUSTOMER
+  TECHNICIAN
+  ADMIN
+}
+
+enum BookingStatus {
+  REQUESTED
+  ACCEPTED
+  DECLINED
+  PAID
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum PaymentProvider {
+  STRIPE
+  SSLCOMMERZ
+}
+
+enum UserStatus {
+  ACTIVE
+  BANNED
+}
