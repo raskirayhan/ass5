@@ -36,6 +36,7 @@ model TechnicianProfile {
   serviceArea  String?
   isVerified   Boolean  @default(false)
   avgRating    Float    @default(0)
+  totalReviews Int      @default(0)
   completedJobs Int     @default(0)
   profileImage String?
   createdAt    DateTime @default(now())

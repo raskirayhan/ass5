@@ -1,12 +1,11 @@
-import { PrismaClient, Role } from "@prisma/client";
+import { Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { config } from "../../config";
 import { ApiError } from "../../utils/ApiError";
 import { sanitizeUser } from "../../helpers";
 import { RegisterInput, LoginInput } from "./auth.validation";
-
-const prisma = new PrismaClient();
+import prisma from "../../prisma";
 
 const register = async (dto: RegisterInput) => {
   const existingUser = await prisma.user.findUnique({
