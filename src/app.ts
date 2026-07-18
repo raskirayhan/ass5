@@ -33,14 +33,17 @@ app.get("/health", (_req, res) => {
   res.json({ success: true, message: "FixItNow API is running", timestamp: new Date().toISOString() });
 });
 
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  customSiteTitle: "FixItNow API Documentation",
-  customCss: ".swagger-ui .topbar { display: none }",
-}));
-
 app.get("/api-docs.json", (_req, res) => {
   res.json(swaggerSpec);
 });
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  swaggerOptions: {
+    url: "/api-docs.json",
+  },
+  customSiteTitle: "FixItNow API Documentation",
+  customCss: ".swagger-ui .topbar { display: none }",
+}));
 
 app.use("/api", routes);
 
