@@ -47,6 +47,17 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 
 app.use("/api", routes);
 
+app.get("/", (_req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Welcome to FixItNow Backend API",
+    version: "1.0.0",
+    documentation: "/api-docs",
+    health: "/health",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.use(notFound);
 app.use(errorHandler);
 
